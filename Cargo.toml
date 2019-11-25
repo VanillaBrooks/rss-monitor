@@ -1,0 +1,19 @@
+[package]
+name = "rss-monitor"
+version = "0.1.0"
+authors = ["VanillaBrooks <brookskarlik@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+# hyper = "0.13.0-alpha.4"
+# tokio = "0.2.0-alpha.6"
+# futures = "0.3.1"
+
+serde_yaml = "0.8.11"
+serde-xml-rs = "0.3.1"
+serde_json = "1.0.40"
+serde = {version = "1.0.101", features= ["serde_derive"]}
+reqwest = "0.9.22"
+postgres = "0.15.2"
