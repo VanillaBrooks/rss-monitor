@@ -110,7 +110,6 @@ impl FeedManager {
                         if x.update_interval < next_update_time {
                             next_update_time = x.update_interval
                         }
-                        // dbg! {"going to run update"};
                         true
 
                     // else: this RSS feed should not be updated yet
@@ -169,6 +168,7 @@ impl FeedManager {
                 }
             })
             .map(|torrent| {
+                println!{"updating for torrent:\n{}for tracker:\n{}", torrent.title, feed.tracker}
                 // insert torrents
                 let torrent_id = ins_torrents.query(&[
                     &torrent.title,              // 1
@@ -197,7 +197,7 @@ impl FeedManager {
             })
             // get out of the option
             .filter(|(_, torrent_id_opt)| {
-                if let Some((Ok(_))) = torrent_id_opt {
+                if let Some(Ok(_)) = torrent_id_opt {
                     true
                 }
                 else {
@@ -239,26 +239,6 @@ impl FeedManager {
                 });
 
             });
-
-        /*
-
-        // for each RSS feed that needs updating, update it
-        .map(|rss| ( rss.tracker, rss.fetch_new(&self.client.as_ref().unwrap()) ) )
-        // if the rss parsing is Result::Ok()
-        .filter(|fetch| fetch.is_ok())
-        // unwrap good results
-        .map(|fetch| (tracker, fetch.unwrap()))
-        // flatten nested vectors to one vector
-        // send data to qbittorrent
-        .map(|(tracker, data_vec)| {
-            dbg!{"made past first filter"};
-            // if we have not previously sent this to qbit...
-            data_vec.iter().map(|data|{
-            }).filter(|x| x);
-
-        })
-
-        */
 
         Ok(hashes_to_add)
     }

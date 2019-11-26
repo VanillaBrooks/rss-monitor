@@ -71,6 +71,14 @@ fn main() {
     let feed = yaml::FeedManager::from_yaml("config.yaml", hashes);
     dbg! {&feed};
     let mut feed = feed.expect("feed unwrap");
-    feed.insert_trackers(&conn);
-    feed.run_update(&conn);
+    feed.insert_trackers(&conn).expect("could not fetch trackers");
+
+    loop {
+        dbg!{"finished tracker iteration"};
+        match feed.run_update(&conn) {
+            Ok(next_update) => std::thread::sleep(std::time::Duration::from_secs(next_update as u64)),
+            Err(err) => println!{"there was an error with updating the feeds: {:?} ", err}
+        }
+
+    }
 }

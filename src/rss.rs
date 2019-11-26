@@ -21,13 +21,21 @@ struct Channel {
     item: Option<Vec<Item>>,
 }
 
-#[derive(Deserialize, Debug, Hash)]
+#[derive(Deserialize, Debug)]
 struct Item {
     title: Option<String>,
     link: Option<String>,
     tags: Option<String>,
     torrent: Option<Torrent>,
     enclosure: Option<Enclosure>,
+    description: Option<String>,
+}
+impl std::hash::Hash for Item {
+    fn hash<T: std::hash::Hasher>(&self, state: &mut T) {
+        self.title.hash(state);
+        self.tags.hash(state);
+        self.description.hash(state);
+    }
 }
 
 #[derive(Deserialize, Debug, Hash)]
