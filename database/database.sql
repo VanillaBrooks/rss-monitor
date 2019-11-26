@@ -1,5 +1,5 @@
 CREATE TABLE tracker (
-    tracker_name VARCHAR(200) NOT NULL,
+    tracker_name VARCHAR(200) UNIQUE NOT NULL,
     tracker_id SERIAL PRIMARY KEY
 );
 
@@ -10,13 +10,14 @@ CREATE TABLE torrents (
     downloaded BOOLEAN NOT NULL,
     rss_hash BIGINT NOT NULL,
     insert_time BIGINT NOT NULL,
+    evaluated BOOLEAN NOT NULL,
     freeleech BOOLEAN,
-    SIZE BIGINT
+    size BIGINT
 );
 
 CREATE TABLE tags (
     tag_id SERIAL PRIMARY KEY,
-    tag_name VARCHAR(30)
+    tag_name VARCHAR(30) UNIQUE NOT NULL
 );
 
 CREATE TABLE tags_torrents (

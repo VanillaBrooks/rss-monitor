@@ -89,7 +89,10 @@ impl TorrentData {
             None => return Err(Error::SerdeMissing),
         };
         let tags = match &item.tags {
-            Some(tags) => tags.split(" ").map(|x| x.to_string().to_lowercase()).collect(),
+            Some(tags) => tags
+                .split(" ")
+                .map(|x| x.to_string().to_lowercase())
+                .collect(),
             None => HashSet::new(),
         };
         let torrent = match item.torrent {
@@ -105,7 +108,12 @@ impl TorrentData {
             item_hash: hash,
         })
     }
-
+    pub fn postgres_size(&self) -> Option<i64> {
+        match self.size {
+            Some(good_size) => Some(good_size as i64),
+            None => None,
+        }
+    }
 }
 
 pub fn xml_to_torrents<'a, T: std::io::Read>(data: T) -> Result<Vec<TorrentData>, Error> {
