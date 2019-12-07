@@ -35,3 +35,14 @@ SELECT tag_id from tags where tag_name = $1;
 -- $1: tag_id
 -- $2: torrent_id
 INSERT INTO tags_torrents (tag_id, torrent_id) VALUES ($1, $2)
+
+with question_tag as (
+	SELECT tag_id from tags where tag_name = 'tag_here'
+)
+SELECT distinct tags_torrents.torrent_id, torrents.torrent_name from tags_torrents 
+INNER JOIN torrents on torrents.torrent_id = tags_torrents.torrent_id
+
+select distinct tag_name, count(tags_torrents.tag_id) as ct from tags
+inner join tags_torrents on tags_torrents.tag_id = tags.tag_id
+group by tag_name
+order by ct desc;

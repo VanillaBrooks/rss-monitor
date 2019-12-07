@@ -2,12 +2,9 @@ use super::error::Error;
 use serde::{Deserialize, Serialize};
 use std::collections::hash_map::DefaultHasher;
 use std::collections::HashSet;
-use std::hash::{self, Hash, Hasher};
+use std::hash::{Hash, Hasher};
 // custom RSS parsing for non-standard rss feeds
-
-use super::yaml;
 use serde_xml_rs as xml;
-use serde_yaml;
 
 #[derive(Deserialize, Debug)]
 struct Document {
@@ -40,9 +37,12 @@ impl std::hash::Hash for Item {
 
 #[derive(Deserialize, Debug, Hash)]
 struct Torrent {
-    fileName: Option<String>,
-    infoHash: Option<String>,
-    contentLength: Option<u64>,
+    #[serde(rename="fileName")]
+    file_name: Option<String>,
+    #[serde(rename="infoHash")]
+    info_hash: Option<String>,
+    #[serde(rename="contentLength")]
+    content_length: Option<u64>,
 }
 
 #[derive(Deserialize, Debug, Hash)]
@@ -62,16 +62,16 @@ impl Item {
             return Ok(link.clone());
         }
 
-        return Err(Error::SerdeMissing);
+        Err(Error::SerdeMissing)
     }
 }
 
 impl Torrent {
     fn default() -> Self {
         Self {
-            fileName: None,
-            infoHash: None,
-            contentLength: None,
+            file_name: None,
+            info_hash: None,
+            content_length: None,
         }
     }
 }
@@ -92,13 +92,9 @@ impl TorrentData {
 
         let link = item.link()?;
 
-        let title = match &item.title {
-            Some(title) => title.to_lowercase(),
-            None => return Err(Error::SerdeMissing),
-        };
         let tags = match &item.tags {
             Some(tags) => tags
-                .split(" ")
+                .split(' ')
                 .map(|x| x.to_string().to_lowercase())
                 .collect(),
             None => HashSet::new(),
@@ -110,9 +106,9 @@ impl TorrentData {
 
         Ok(Self {
             title: item.title.take().unwrap().to_lowercase(),
-            tags: tags,
+            tags,
             download_link: link,
-            size: torrent.contentLength,
+            size: torrent.content_length,
             item_hash: hash,
         })
     }
@@ -124,14 +120,14 @@ impl TorrentData {
     }
 }
 
-pub fn xml_to_torrents<'a, T: std::io::Read>(data: T) -> Result<Vec<TorrentData>, Error> {
+pub fn xml_to_torrents<T: std::io::Read>(data: T) -> Result<Vec<TorrentData>, Error> {
     let doc: Document = xml::from_reader(data)?;
 
     if let Some(channel) = doc.channel {
         if let Some(items) = channel.item {
             let t_data = items
                 .into_iter()
-                .map(|item| TorrentData::new(item))
+                .map(TorrentData::new) 
                 .filter(|item| item.is_ok())
                 .map(|item| item.unwrap())
                 .collect::<Vec<_>>();

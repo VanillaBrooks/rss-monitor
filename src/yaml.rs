@@ -1,12 +1,12 @@
 use super::error::Error;
-use super::rss::{self, TorrentData};
+use super::rss::{self};
 use super::utils;
 
-use std::collections::{HashMap, HashSet};
-use std::fs::{self, File};
+use std::collections::{HashSet};
+use std::fs::{File};
 
 use reqwest;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize};
 use serde_yaml;
 
 #[derive(Debug, Deserialize)]
@@ -46,7 +46,9 @@ impl FeedManager {
 
         self.feeds.iter().for_each(|rss_feed| {
             let tracker_name = &rss_feed.tracker;
-            ins_tracker.execute(&[tracker_name]);
+            
+            // TODO: we dont really need this result make it with #[allow(unused_must_use)]
+            match ins_tracker.execute(&[tracker_name]) {_ => ()}
         });
 
         Ok(())
@@ -90,11 +92,6 @@ impl FeedManager {
         ",
             )
             .expect("ins tags torrents");
-
-        let now = utils::current_unix_time() as i64;
-
-        // dbg! {"running through main loop"};
-        // dbg! {&self.feeds};
 
         let hashes_to_add = 
             self.feeds
@@ -158,14 +155,8 @@ impl FeedManager {
 
         data.iter()
             .filter(|data| {
-                if !self.previous_hashes.contains(&data.item_hash) {
-                    hashes_to_add.insert(data.item_hash);
-                    // dbg! {true};
-                    true
-                } else {
-                    // dbg! {false};
-                    false
-                }
+                // if we have previously not handled this data pass it on
+                !self.previous_hashes.contains(&data.item_hash)
             })
             .map(|torrent| {
                 println!{"updating for torrent:\n{}for tracker:\n{}", torrent.title, feed.tracker}
@@ -185,18 +176,16 @@ impl FeedManager {
 
                 (torrent, torrent_id)
             })
-            .filter(|(_, t_res)| t_res.is_ok())
-            .map(|(x, t_res)| {
+            .filter(|(_torrent, t_res)| t_res.is_ok())
+            .map(|(torrent, t_res)| {
                 let row = t_res.unwrap();
-                // dbg!{&row};
+                // TODO: Fix this get statement
                 let row = row.get(0);
-                // dbg!{&row};
                 let val: Option<Result<i32, _>> = row.get_opt(0);
-                // dbg!{&val};
-                (x, val)
+                (torrent, val)
             })
             // get out of the option
-            .filter(|(_, torrent_id_opt)| {
+            .filter(|(_torrent, torrent_id_opt)| {
                 if let Some(Ok(_)) = torrent_id_opt {
                     true
                 }
@@ -212,30 +201,32 @@ impl FeedManager {
                     .tags
                     .iter()
                     .map(|tag| {
-                        let a = ins_tags.execute(&[tag]);
-                        // dbg!{&a};
-                        tag
+                        let tag_insersion_response = ins_tags.execute(&[tag]);
+                        (tag, tag_insersion_response)
                     })
-                    .map(|tag| sel_tags.query(&[tag]))
-                    .filter(|x| x.is_ok())
+                    .filter(|(_tag, response)| response.is_ok())
+                    .map(|(tag, _)| sel_tags.query(&[tag]))
+                    .filter(|tag_id_query| tag_id_query.is_ok())
+                    .map(|tag_id_query| tag_id_query.unwrap())
+                    .filter(|tag_id_rows| !tag_id_rows.is_empty())
                     .map(|rows| {
-                        let rows = rows.unwrap();
+                        // let rows : postgres::rows::Rows = rows.unwrap();
 
                         let row = rows.get(0);
                         let val: Option<Result<i32, _>> = row.get_opt(0);
                         val
                     })
-                    .filter(|x| if let Some(Ok(x)) = x { true } else { false })
-                    .map(|x| {
-                        let tag_id = x.unwrap().unwrap();
-                        tag_id
+                    .filter(|x| if let Some(Ok(_)) = x { true } else { false })
+                    .map(|tag_id_option| {
+                        tag_id_option.unwrap().unwrap()
                     })
                     .collect::<Vec<_>>();
 
                 // update many to many table
                 tag_ids.iter().for_each(|tag_id| {
-                    ins_tag_torrents.execute(&[tag_id, &torrent_id]);
-                    ()
+                    if ins_tag_torrents.execute(&[tag_id, &torrent_id]).is_ok() {
+                        hashes_to_add.insert(torrent.item_hash);
+                    }
                 });
 
             });
@@ -254,7 +245,7 @@ pub struct RssFeed {
 }
 impl RssFeed {
     pub fn fetch_new(&self, pool: &reqwest::Client) -> Result<Vec<rss::TorrentData>, Error> {
-        let mut response = pool.get(&self.url).send()?;
+        let response = pool.get(&self.url).send()?;
         let data = rss::xml_to_torrents(response)?;
 
         Ok(data)
